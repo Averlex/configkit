@@ -1,11 +1,11 @@
 # configkit
 
-Simple configuration bootstrapping for Go services — load from file, override with env, and get CLI flags (--config, --version, --help) out of the box.
-
 [![Go version](https://img.shields.io/badge/go-1.24.2+-blue.svg)](https://golang.org)
 [![Go Reference](https://pkg.go.dev/badge/github.com/Averlex/configkit.svg)](https://pkg.go.dev/github.com/Averlex/configkit)
 [![Go Report Card](https://goreportcard.com/badge/github.com/Averlex/configkit)](https://goreportcard.com/report/github.com/Averlex/configkit)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
+Simple configuration bootstrapping for Go services — load from file, override with env, and get CLI flags (--config, --version, --help) out of the box.
 
 **Minimal configuration loader for Go services**
 
