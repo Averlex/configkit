@@ -3,9 +3,12 @@ package configkit
 import (
 	"fmt"
 	"io"
+	"reflect"
+
+	"github.com/spf13/viper"
 )
 
-// Loader is a viper config loader.
+// Loader is a configuration loader with CLI support.
 type Loader struct {
 	name, short, long string // Root command attributes.
 	configPath        string
@@ -14,13 +17,11 @@ type Loader struct {
 
 // NewLoader returns a new viper loader.
 //
-// name is the short name of the service, as well as the name of the root command.
-//
-// short and long are the short and long descriptions of the service for the root command.
-//
-// configPath is the path to the configuration file.
-//
-// envPrefix is the prefix for environment variables.
+//   - name: short name of the service, as well as the name of the root command.
+//   - short, long: short and long descriptions of the service for the root command.
+//   - configPath is the path to the configuration file. It will be overrided with a value,
+//     received via the --config flag. If the flag is not set, Loader will use the configPath.
+//   - envPrefix: prefix for environment variables (e.g., "APP" → APP_LOG_LEVEL).
 func NewLoader(name, short, long, configPath, envPrefix string) *Loader {
 	return &Loader{
 		configPath: configPath,
@@ -31,26 +32,45 @@ func NewLoader(name, short, long, configPath, envPrefix string) *Loader {
 	}
 }
 
-// Load loads configuration from a file and environment variables.
-// It checks the flags in the process and executes the root command, depending on the flag.
-// If no additional flags are set, it will load the configuration from the path provided.
+// Load loads configuration from a file and environment variables into cfg.
 //
-// If -h (--help) or -v (--version) flags are set, it will return nil, ErrShouldStop
-// as a signal to stop the execution.
-func (l *Loader) Load(cfg ServiceConfig, printVersion func(io.Writer) error, writer io.Writer) (ServiceConfig, error) {
-	cmd, err := l.buildRootCommand(l.name, l.short, l.long, cfg, printVersion, writer)
+// Arguments:
+//   - cfg must be a pointer to a struct.
+//   - printVersion is called when --version is used.
+//     Package provides to helpers (JSONVersionPrinter and PlainVersionPrinter) for a quick setup.
+//   - writer is used for output (can be os.Stdout, buffer, etc. - any writer to handle printVersion).
+//
+// Returns:
+//   - LoadResultStop: if --help or --version was used (no error).
+//   - LoadResultContinue: if config was loaded successfully.
+//   - error: if there was a problem (e.g. config file not found).
+func (l *Loader) Load(cfg any, printVersion func(io.Writer) error, writer io.Writer) (LoadResult, error) {
+	// Validate the input.
+	if reflect.ValueOf(cfg).Kind() != reflect.Ptr {
+		return LoadResultStop, fmt.Errorf("cfg must be a pointer to a struct - got %s", reflect.ValueOf(cfg).Kind().String())
+	}
+	if printVersion == nil {
+		return LoadResultStop, fmt.Errorf("printVersion must be a function")
+	}
+	if writer == nil {
+		return LoadResultStop, fmt.Errorf("writer must be a non-nil writer")
+	}
+
+	v := viper.New()
+
+	cmd, err := l.buildRootCommand(v, cfg, printVersion, writer)
 	if err != nil {
-		return nil, fmt.Errorf("build root command: %w", err)
+		return LoadResultStop, fmt.Errorf("build root command: %w", err)
 	}
 
 	if err := cmd.Execute(); err != nil {
-		return nil, fmt.Errorf("execute root command: %w", err)
+		return LoadResultStop, fmt.Errorf("execute root command: %w", err)
 	}
 
-	// Check if the help or version flag is set. If so, stop execution.
+	// If --help or --version was triggered, stop gracefully.
 	if cmd.Flags().Changed("help") || cmd.Flags().Changed("version") {
-		return nil, ErrShouldStop
+		return LoadResultStop, nil
 	}
 
-	return cfg, nil
+	return LoadResultContinue, nil
 }

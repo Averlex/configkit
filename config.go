@@ -1,20 +1,30 @@
 // Package configkit provides a minimal configuration loader for Go services.
-// It supports loading from file, overriding with environment variables,
-// and built-in CLI flags (--config, --version, --help).
+// It supports:
+//   - Loading config from file (--config flag)
+//   - Overriding values with environment variables (prefix-based)
+//   - Built-in --version and --help flags
+//   - Custom version output formatting
+//
+// Example:
+//
+//	loader := configkit.NewLoader("myapp", "My App", "", "config.yaml", "MYAPP")
+//	result, err := loader.Load(&cfg, configkit.PlainVersionPrinter("v1.0.0"), os.Stdout)
+//	if err != nil {
+//	    log.Fatal(err)
+//	}
+//	if result == configkit.LoadResultStop {
+//	    return
+//	}
+//	// continue with initialized config
 package configkit
 
-import (
-	"errors"
-)
+// LoadResult indicates the outcome of the Load operation.
+type LoadResult int
 
-// Additional errors to control the execution flow.
-var (
-	// ErrShouldStop is returned when the execution should be stopped. E.g. on -v and -h flags.
-	ErrShouldStop = errors.New("execution should be stopped")
-)
+const (
+	// LoadResultContinue means the program should continue after config load.
+	LoadResultContinue LoadResult = iota
 
-// ServiceConfig is an interface generalizing service config.
-type ServiceConfig interface {
-	// GetSubConfig returns the part of the config that corresponds to the key.
-	GetSubConfig(key string) (map[string]any, error)
-}
+	// LoadResultStop means the program should stop (e.g. after --help or --version).
+	LoadResultStop
+)
