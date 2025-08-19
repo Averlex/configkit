@@ -1,4 +1,4 @@
-module configkit
+module github.com/Averlex/configkit
 
 go 1.24.2
 
