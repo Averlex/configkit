@@ -40,6 +40,11 @@ func NewLoader(name, short, long, configPath, envPrefix string) *Loader {
 //     Package provides to helpers (JSONVersionPrinter and PlainVersionPrinter) for a quick setup.
 //   - writer is used for output (can be os.Stdout, buffer, etc. - any writer to handle printVersion).
 //
+// Note: While Loader is stateless and uses isolated viper instances,
+// calling Load() concurrently with CLI flag parsing is not recommended,
+// as underlying libraries (such as cobra) are not designed for concurrent use.
+// Use Load() sequentially during application startup.
+//
 // Returns:
 //   - LoadResultStop: if --help or --version was used (no error).
 //   - LoadResultContinue: if config was loaded successfully.
